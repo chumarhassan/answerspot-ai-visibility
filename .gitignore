@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Env / secrets — NEVER commit real keys
+.env
+*.env
+!.env.example
+backend/.env
+frontend/.env
+
+# Local database
+*.db
+*.sqlite3
+answerspot.db
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Docs to exclude
+README.md
+CLAUDE.md
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
