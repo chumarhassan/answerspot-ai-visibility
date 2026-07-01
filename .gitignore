@@ -6,7 +6,7 @@ __pycache__/
 venv/
 .pytest_cache/
 
-# Env / secrets — NEVER commit real keys
+# Env
 .env
 *.env
 !.env.example
