@@ -17,7 +17,7 @@
 - **Referral Loop**: Built-in system for viral growth and user rewards.
 
 ### 🚧 The "Honest" State of the Project
-> **Note on UI/UX**: Let's be real—the current interface is highly functional but visually rough. It’s an MVP (Minimum Viable Product) focused purely on the underlying logic and AI accuracy. If you're a designer or a frontend wizard, this is your playground! 
+> **Note on UI/UX**: Let's be real—the current interface is highly functional but visually rough. It’s an MVP (Minimum Viable Product) focused purely on the underlying logic and AI accuracy.
 
 ### 🛠 Tech Stack
 - **Backend**: FastAPI, SQLAlchemy, Pydantic, APScheduler.
@@ -53,7 +53,7 @@ I am actively looking for contributors to help turn this logic-heavy tool into a
    - `npm run dev`
 
 ### 🌍 Deployment Status
-**Deployment is currently in progress.** The project is built to be $0-cost to run, leveraging permanent free tiers. 1-click deployment templates for Vercel and Render are coming soon.
+**Deployment is currently in progress.** 1-click deployment templates for Vercel and Render are coming soon.
 
 ---
 *Built with transparency and a passion for local business success.*
