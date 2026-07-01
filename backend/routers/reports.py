@@ -1,23 +1,15 @@
-"""Week-over-week report endpoint — diffs the two most recent OK snapshots (§3.5)."""
 from __future__ import annotations
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from auth import get_current_user
 from db import get_db
 from diff import SnapshotView, diff_snapshots
 from gemini import _norm
 from models import AuditSnapshot, Business, SnapshotStatus, User
 from schemas import DiffResponse
-
 router = APIRouter(prefix="/api/reports", tags=["reports"])
-
-
 def _to_view(snapshot: AuditSnapshot, target_name: str) -> SnapshotView:
-    # Exclude the owner's own business from the competitor set so the diff never
-    # reports the owner as a "new/dropped competitor".
     target = _norm(target_name)
     competitors = [
         b for b in (snapshot.businesses_mentioned or [])
@@ -29,8 +21,6 @@ def _to_view(snapshot: AuditSnapshot, target_name: str) -> SnapshotView:
         position=snapshot.position,
         competitors=competitors,
     )
-
-
 @router.get("/{business_id}/diff", response_model=DiffResponse)
 def get_diff(
     business_id: int,
@@ -40,8 +30,6 @@ def get_diff(
     biz = db.get(Business, business_id)
     if not biz or biz.user_id != user.id:
         raise HTTPException(status_code=404, detail="Business not found")
-
-    # Two most recent successful snapshots; diffing only makes sense over real data.
     snaps = db.scalars(
         select(AuditSnapshot)
         .where(
@@ -51,10 +39,8 @@ def get_diff(
         .order_by(AuditSnapshot.ran_at.desc())
         .limit(2)
     ).all()
-
     if not snaps:
         return DiffResponse(has_previous=False, summary="No successful checks yet.")
-
     current = _to_view(snaps[0], biz.name)
     previous = _to_view(snaps[1], biz.name) if len(snaps) > 1 else None
     result = diff_snapshots(current, previous)

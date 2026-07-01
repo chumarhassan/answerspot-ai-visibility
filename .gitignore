@@ -10,8 +10,6 @@ venv/
 .env
 *.env
 !.env.example
-backend/.env
-frontend/.env
 
 # Local database
 *.db
@@ -23,12 +21,11 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 
-# Docs to exclude
-README.md
-CLAUDE.md
-
-# Editor / OS
+# editor / OS
 .DS_Store
 .idea/
 .vscode/
 *.log
+
+# Documentation (Private)
+README.md

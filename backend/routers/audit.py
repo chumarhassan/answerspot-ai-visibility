@@ -1,23 +1,17 @@
-"""Public free-audit endpoint (§7) — no authentication required."""
 from __future__ import annotations
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
 import audit as audit_service
 from db import get_db
 from gemini import build_audit_query
 from models import SnapshotStatus
 from schemas import AuditRequest, AuditResponse, TeaserIssue
-
+from security import RateLimit
 router = APIRouter(prefix="/api/audit", tags=["audit"])
-
-
-@router.post("", response_model=AuditResponse)
+_audit_limit = RateLimit("audit", limit=5, window=60)
+@router.post("", response_model=AuditResponse, dependencies=[Depends(_audit_limit)])
 async def run_free_audit(payload: AuditRequest, db: Session = Depends(get_db)) -> AuditResponse:
     snapshot = await audit_service.run_free_audit(db, payload.name, payload.category, payload.city)
-
-    # Rebuild a CheckResult-like view from the stored snapshot for teaser generation.
     result = audit_service.CheckResult(
         status=snapshot.status,
         raw=snapshot.raw_response,
@@ -30,7 +24,6 @@ async def run_free_audit(payload: AuditRequest, db: Session = Depends(get_db)) -
         result, payload.name, limit=audit_service.MAX_TEASER_COMPETITORS
     )
     issues = audit_service.teaser_issues(result, competitors)
-
     return AuditResponse(
         snapshot_id=snapshot.id,
         status=snapshot.status,

@@ -1,63 +1,74 @@
-// Week-over-week report: a simple delta view, not a raw data dump (§3.5).
-import { ArrowDown, ArrowUp, Minus, TrendUp, UserMinus, UserPlus } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import {
+  ArrowDown, ArrowUp, Minus, TrendUp, UserMinus, UserPlus,
+} from "@phosphor-icons/react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
-
+import BusinessSelector from "../components/BusinessSelector.jsx";
+import { Skeleton, SkeletonText } from "../components/Skeleton.jsx";
+const SELECTED_BIZ_KEY = "answerspot_selected_biz_id";
 export default function Reports() {
+  const [businesses, setBusinesses] = useState([]);
+  const [businessId, setBusinessId] = useState(null);
   const [diff, setDiff] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const list = await api.get("/api/businesses");
-        if (list.length === 0) {
-          setError("Add a business first.");
-          return;
-        }
-        const d = await api.get(`/api/reports/${list[0].id}/diff`);
-        setDiff(d);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const load = useCallback(async (targetId = null) => {
+    setLoading(true);
+    setError("");
+    try {
+      const list = await api.get("/api/businesses");
+      setBusinesses(list);
+      if (list.length === 0) {
+        setError("Add a business first.");
+        return;
       }
-    })();
+      const savedId = localStorage.getItem(SELECTED_BIZ_KEY);
+      const id = Number(targetId || savedId) || list[0].id;
+      setBusinessId(id);
+      localStorage.setItem(SELECTED_BIZ_KEY, id);
+      const d = await api.get(`/api/reports/${id}/diff`);
+      setDiff(d);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
-
-  if (loading) {
-    return <div className="loading-page"><span className="spinner spinner-dark" style={{ width: 28, height: 28 }} /></div>;
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
+  if (loading) return <ReportsSkeleton />;
   if (error) return <div className="alert alert-bad">{error}</div>;
-
   return (
     <>
+      <BusinessSelector
+        businesses={businesses}
+        currentId={businessId}
+        onChange={(id) => load(id)}
+      />
       <div className="page-head">
         <h1>Weekly report</h1>
-        <p className="muted small" style={{ marginTop: 4 }}>What changed since your previous check.</p>
+        <p className="lead small">What changed since your previous check.</p>
       </div>
-
       {!diff.has_previous ? (
-        <div className="card">
-          <div className="item-icon" style={{ background: "var(--accent-soft)", marginBottom: 12 }}>
-            <TrendUp size={18} weight="bold" color="var(--accent)" />
+        <div className="card animate-in">
+          <div className="empty">
+            <div className="empty-icon"><TrendUp size={24} weight="fill" /></div>
+            <h3>Not enough history yet</h3>
+            <p>{diff.summary}</p>
           </div>
-          <h3 style={{ fontSize: 18 }}>Not enough history yet</h3>
-          <p className="muted" style={{ marginTop: 6 }}>{diff.summary}</p>
         </div>
       ) : (
-        <>
-          <div className="card" style={{ marginBottom: 18 }}>
-            <div className="card-title">Summary</div>
-            <p style={{ fontSize: 17, color: "var(--ink-2)", lineHeight: 1.55, margin: 0 }}>{diff.summary}</p>
-            <p className="muted small" style={{ marginTop: 12 }}>
+        <div className="stack animate-in">
+          <div className="card">
+            <div className="card-title"><TrendUp size={15} weight="bold" /> Summary</div>
+            <p style={{ fontSize: "var(--text-md)", color: "var(--ink-2)", lineHeight: "var(--leading-normal)" }}>{diff.summary}</p>
+            <p className="muted small mt-4">
               Comparing {new Date(diff.current_ran_at).toLocaleDateString()} vs{" "}
               {new Date(diff.previous_ran_at).toLocaleDateString()}
             </p>
           </div>
-
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+          <div className="grid grid-3 stagger">
             <DeltaCard
               title="Ranking"
               icon={positionIcon(diff.position_change)}
@@ -77,25 +88,23 @@ export default function Reports() {
               tone={diff.dropped_competitors.length ? "good" : "neutral"}
             />
           </div>
-        </>
+        </div>
       )}
     </>
   );
 }
-
 function DeltaCard({ title, icon, value, tone }) {
   const toneClass = { good: "pill-good", bad: "pill-bad", warn: "pill-warn", neutral: "pill-neutral" }[tone];
   return (
-    <div className="card">
+    <div className="card card-hover">
       <div className="card-title">{title}</div>
-      <div className="spread">
-        <span style={{ fontSize: 16, fontWeight: 600 }}>{value}</span>
-        <span className={`pill ${toneClass}`} style={{ padding: 6 }}>{icon}</span>
+      <div className="spread" style={{ alignItems: "center" }}>
+        <span style={{ fontSize: "var(--text-md)", fontWeight: 600, color: "var(--ink)" }}>{value}</span>
+        <span className={`pill ${toneClass}`} style={{ padding: 7 }}>{icon}</span>
       </div>
     </div>
   );
 }
-
 function positionIcon(change) {
   if (change == null || change === 0) return <Minus size={16} weight="bold" />;
   return change < 0 ? <ArrowUp size={16} weight="bold" /> : <ArrowDown size={16} weight="bold" />;
@@ -104,4 +113,25 @@ function positionText(change) {
   if (change == null) return "Not ranked";
   if (change === 0) return "No change";
   return change < 0 ? `Up ${Math.abs(change)}` : `Down ${change}`;
+}
+function ReportsSkeleton() {
+  return (
+    <div aria-busy="true">
+      <div className="page-head">
+        <Skeleton width={200} height={26} radius={8} />
+        <Skeleton width={280} height={13} radius={999} style={{ marginTop: 10 }} />
+      </div>
+      <div className="stack">
+        <div className="card"><Skeleton width={120} height={12} radius={999} style={{ marginBottom: 16 }} /><SkeletonText lines={2} /></div>
+        <div className="grid grid-3">
+          {[0, 1, 2].map((i) => (
+            <div className="card" key={i}>
+              <Skeleton width={100} height={12} radius={999} style={{ marginBottom: 16 }} />
+              <Skeleton width="70%" height={18} radius={8} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
